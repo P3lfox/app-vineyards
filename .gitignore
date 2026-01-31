@@ -1,0 +1,11 @@
+esquemaDb.sql
+
+
+#front
+front/vineyards/package-lock.json
+
+
+#back
+back/package-lock.json
+back/node_modules
+back/.env
