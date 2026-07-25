@@ -69,7 +69,7 @@ export default function PlantHealthMap() {
   // Fetch vineyards + plots on mount
   useEffect(() => {
     Promise.all([
-      api.get("/vineyards/getVineyards"),
+      api.get("/vineyard/getVineyards"),
       api.get("/plots/getPlots"),
       api.get("/diseases/getDiseases"),
       api.get("/treatments/getTreatments"),
