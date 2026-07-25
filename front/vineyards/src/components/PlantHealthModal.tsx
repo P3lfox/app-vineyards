@@ -77,6 +77,14 @@ export default function PlantHealthModal({
       : { treatment_id: "", fecha_aplicacion: new Date().toISOString().split("T")[0], resultado: "" }
   )
   const [submitting, setSubmitting] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const catalogItems = isDiseaseMode ? diseases : treatments
+  const filteredItems = catalogItems
+    .filter((item: Disease | Treatment) => !("deleted_at" in item && item.deleted_at))
+    .filter((item: Disease | Treatment) =>
+      item.nombre.toLowerCase().includes(searchQuery.toLowerCase())
+    )
 
   const catalogItems = isDiseaseMode ? diseases : treatments
   const historyUrl = isDiseaseMode
@@ -164,20 +172,50 @@ export default function PlantHealthModal({
             <h4 className="text-sm font-semibold text-white">
               Registrar {isDiseaseMode ? "enfermedad" : "tratamiento"}
             </h4>
-            <div className="flex gap-2">
-              <select
-                value={quickForm[catalogField]}
-                onChange={e => setQuickForm({ ...quickForm, [catalogField]: e.target.value })}
-                required
-                className="flex-1 p-2 rounded-lg bg-slate-700 text-white outline-none text-sm"
-              >
-                <option value="">Seleccionar {isDiseaseMode ? "enfermedad" : "tratamiento"}</option>
-                {catalogItems
-                  .filter((item: Disease | Treatment) => !("deleted_at" in item && item.deleted_at))
-                  .map((item: Disease | Treatment) => (
-                    <option key={item.id} value={item.id}>{item.nombre}</option>
+            <div className="space-y-1">
+              <input
+                type="text"
+                placeholder={`Buscar ${isDiseaseMode ? "enfermedad" : "tratamiento"}...`}
+                value={searchQuery}
+                onChange={e => {
+                  setSearchQuery(e.target.value)
+                  // If the search matches exactly one item, auto-select it
+                  const exact = filteredItems.find(
+                    (item: Disease | Treatment) => item.nombre.toLowerCase() === e.target.value.toLowerCase()
+                  )
+                  if (exact) {
+                    setQuickForm({ ...quickForm, [catalogField]: String(exact.id) })
+                  }
+                }}
+                className="w-full p-2 rounded-lg bg-slate-700 text-white outline-none text-sm placeholder:text-slate-500"
+              />
+              {searchQuery && filteredItems.length > 0 && (
+                <div className="max-h-32 overflow-y-auto bg-slate-700 rounded-lg border border-slate-600">
+                  {filteredItems.slice(0, 8).map((item: Disease | Treatment) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setQuickForm({ ...quickForm, [catalogField]: String(item.id) })
+                        setSearchQuery(item.nombre)
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-sm transition ${
+                        quickForm[catalogField] === String(item.id)
+                          ? "bg-emerald-600/30 text-emerald-400"
+                          : "text-white hover:bg-slate-600"
+                      }`}
+                    >
+                      {item.nombre}
+                      {isDiseaseMode && "gravedad" in item && (
+                        <span className="ml-2 text-xs opacity-60">({(item as Disease).gravedad})</span>
+                      )}
+                    </button>
                   ))}
-              </select>
+                </div>
+              )}
+              {searchQuery && filteredItems.length === 0 && (
+                <p className="text-xs text-slate-500 px-1">Sin resultados</p>
+              )}
             </div>
             <div className="flex gap-2">
               <input
