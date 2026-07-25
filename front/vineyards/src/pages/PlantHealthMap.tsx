@@ -5,11 +5,6 @@ import { varietalColor } from "../constants/varietalColors"
 import PlantHealthModal from "../components/PlantHealthModal"
 import CatalogDrawer from "../components/CatalogDrawer"
 
-type Vineyard = {
-  id: number
-  nombre: string
-}
-
 type Plot = {
   id: number
   nombre: string
@@ -51,7 +46,6 @@ type Treatment = {
 export default function PlantHealthMap() {
   const navigate = useNavigate()
 
-  const [vineyards, setVineyards] = useState<Vineyard[]>([])
   const [plots, setPlots] = useState<Plot[]>([])
   const [selectedPlotId, setSelectedPlotId] = useState<number | null>(null)
   const [rows, setRows] = useState<VineRow[]>([])
@@ -66,16 +60,14 @@ export default function PlantHealthMap() {
   const [loadingDiseases, setLoadingDiseases] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
-  // Fetch vineyards + plots on mount
+  // Fetch plots + catalog on mount (same pattern as Plots.tsx)
   useEffect(() => {
     Promise.all([
-      api.get("/vineyard/getVineyards"),
       api.get("/plots/getPlots"),
       api.get("/diseases/getDiseases"),
       api.get("/treatments/getTreatments"),
     ])
-      .then(([vineyardsRes, plotsRes, diseasesRes, treatmentsRes]) => {
-        setVineyards(vineyardsRes.data)
+      .then(([plotsRes, diseasesRes, treatmentsRes]) => {
         setPlots(plotsRes.data)
         setDiseases(diseasesRes.data)
         setTreatments(treatmentsRes.data)
@@ -86,10 +78,10 @@ export default function PlantHealthMap() {
       })
   }, [])
 
-  // Enrich plots with vineyard names
+  // Group plots by vineyard for selector
   const plotsWithVineyard = plots.map(plot => ({
     ...plot,
-    vineyard_nombre: vineyards.find(v => v.id === plot.vineyard_id)?.nombre || "Sin viñedo",
+    vineyard_nombre: plot.vineyard_nombre || "Sin viñedo",
   }))
 
   // Fetch rows + plants when plot selected
