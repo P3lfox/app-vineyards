@@ -370,61 +370,87 @@ export default function Prunings() {
   }
 
   // Continue to adjacent row
-  const continueToRow = (newRowIndex: number, newDirection: "forward" | "backward", finishedIdx?: number | null) => {
+  const continueToRow = async (newRowIndex: number, newDirection: "forward" | "backward", finishedIdx?: number | null) => {
     const row = rows[newRowIndex]
-    const unpruned = row.plants.filter((p) => !p.ya_podada).length
     const effectiveFinishedIdx = finishedIdx ?? lastFinishedPlantIndex
 
-    // Find starting plant based on where we finished the previous row
-    let startIdx = 0
-    if (effectiveFinishedIdx !== null && effectiveFinishedIdx >= 0) {
-      // Clamp to the new row's length
-      const targetIdx = Math.min(effectiveFinishedIdx, row.plants.length - 1)
+    // Reload fresh data from backend to get accurate ya_podada status
+    setLoading(true)
+    try {
+      const res = await api.get("/plant-prunings/getPlantsForPruning", {
+        params: { plot_id: selectedPlot?.id, campania },
+      })
+      setRows(res.data.rows)
+      const freshRow = res.data.rows.find((r: Row) => r.row_id === row.row_id)
+      if (!freshRow) {
+        setError("No se pudo recargar la fila.")
+        setPhase("row-complete")
+        return
+      }
 
-      // Find the closest unpruned plant to the target index
-      let bestIdx = -1
-      let bestDist = Infinity
-      for (let i = 0; i < row.plants.length; i++) {
-        if (!row.plants[i].ya_podada) {
-          const dist = Math.abs(i - targetIdx)
-          if (dist < bestDist) {
-            bestDist = dist
-            bestIdx = i
+      const unpruned = freshRow.plants.filter((p: Plant) => !p.ya_podada).length
+
+      // If all plants are already pruned, skip this row
+      if (unpruned === 0) {
+        const newCompleted = new Set([...completedRowIds, freshRow.row_id])
+        setCompletedRowIds(newCompleted)
+        setError(`Fila ${freshRow.row_numero}: todas las plantas ya están podadas en esta campaña.`)
+        setPhase("row-complete")
+        return
+      }
+
+      // Find starting plant based on where we finished the previous row
+      let startIdx = 0
+      if (effectiveFinishedIdx !== null && effectiveFinishedIdx >= 0) {
+        const targetIdx = Math.min(effectiveFinishedIdx, freshRow.plants.length - 1)
+
+        let bestIdx = -1
+        let bestDist = Infinity
+        for (let i = 0; i < freshRow.plants.length; i++) {
+          if (!freshRow.plants[i].ya_podada) {
+            const dist = Math.abs(i - targetIdx)
+            if (dist < bestDist) {
+              bestDist = dist
+              bestIdx = i
+            }
           }
         }
-      }
 
-      if (bestIdx !== -1) {
-        // Convert to ordered array index
-        startIdx = newDirection === "backward"
-          ? row.plants.length - 1 - bestIdx
-          : bestIdx
+        if (bestIdx !== -1) {
+          startIdx = newDirection === "backward"
+            ? freshRow.plants.length - 1 - bestIdx
+            : bestIdx
+        } else {
+          startIdx = newDirection === "backward"
+            ? freshRow.plants.length - 1
+            : 0
+        }
       } else {
-        // Fallback: find first/last unpruned
         startIdx = newDirection === "backward"
-          ? row.plants.length - 1
+          ? freshRow.plants.length - 1
           : 0
       }
-    } else {
-      // First row or no previous position: start from beginning/end
-      startIdx = newDirection === "backward"
-        ? row.plants.length - 1
-        : 0
-    }
 
-    setCurrentRowIndex(newRowIndex)
-    setCurrentPlantIndex(startIdx)
-    setDirection(newDirection)
-    setPrunedCount(0)
-    setSkippedCount(0)
-    setInitialUnprunedCount(unpruned)
-    setFormData({
-      tipo_poda: "",
-      intensidad: "",
-      fecha: formData.fecha,
-      observaciones: "",
-    })
-    setPhase("pruning")
+      const newRowIdx = res.data.rows.findIndex((r: Row) => r.row_id === freshRow.row_id)
+      setCurrentRowIndex(newRowIdx)
+      setCurrentPlantIndex(startIdx)
+      setDirection(newDirection)
+      setPrunedCount(0)
+      setSkippedCount(0)
+      setInitialUnprunedCount(unpruned)
+      setFormData({
+        tipo_poda: "",
+        intensidad: "",
+        fecha: formData.fecha,
+        observaciones: "",
+      })
+      setPhase("pruning")
+    } catch {
+      setError("Error al recargar datos de la fila.")
+      setPhase("row-complete")
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Get adjacent row suggestions
