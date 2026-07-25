@@ -242,9 +242,12 @@ export default function Prunings() {
   }, [phase, selectedPlot, currentRow, direction, currentPlantIndex, prunedPlantIds, campania, savedSession, podaTaskId])
 
   // Skip already pruned plants
+  // Use both prunedPlantIds (this session) and ya_podada (previous sessions)
   const getNextUnprunedIndex = (startIndex: number) => {
     for (let i = startIndex; i < orderedPlants.length; i++) {
-      if (!orderedPlants[i].ya_podada) return i
+      const plant = orderedPlants[i]
+      const podadaEnSesion = prunedPlantIds.includes(plant.plant_id)
+      if (!podadaEnSesion && !plant.ya_podada) return i
     }
     return -1 // all remaining are pruned
   }
