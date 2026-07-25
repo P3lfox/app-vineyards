@@ -64,6 +64,7 @@ export default function PlantHealthMap() {
   const [treatments, setTreatments] = useState<Treatment[]>([])
   const [activeDiseasePlantIds, setActiveDiseasePlantIds] = useState<Set<number>>(new Set())
   const [loadingDiseases, setLoadingDiseases] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   // Fetch vineyards + plots on mount
   useEffect(() => {
@@ -79,7 +80,10 @@ export default function PlantHealthMap() {
         setDiseases(diseasesRes.data)
         setTreatments(treatmentsRes.data)
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error("Error fetching sanidad data:", err)
+        setFetchError("Error al cargar datos. Recargá la página.")
+      })
   }, [])
 
   // Enrich plots with vineyard names
@@ -179,26 +183,27 @@ export default function PlantHealthMap() {
         </p>
       </div>
 
-      {/* Controls: plot selector + mode toggle */}
+      {/* Error state */}
+      {fetchError && (
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl p-4">
+          {fetchError}
+        </div>
+      )}
+
+      {/* Controls: plot selector + mode toggle + catalog button */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Plot selector grouped by vineyard */}
+        {/* Plot selector - shows all plots if vineyards is empty */}
         <select
           value={selectedPlotId || ""}
           onChange={e => setSelectedPlotId(e.target.value ? Number(e.target.value) : null)}
           className="flex-1 min-w-[200px] p-2.5 rounded-lg bg-slate-700 text-white outline-none text-sm"
         >
           <option value="">Seleccionar parcela...</option>
-          {vineyards.map(vineyard => {
-            const vineyardPlots = plotsWithVineyard.filter(p => p.vineyard_id === vineyard.id)
-            if (vineyardPlots.length === 0) return null
-            return (
-              <optgroup key={vineyard.id} label={vineyard.nombre}>
-                {vineyardPlots.map(plot => (
-                  <option key={plot.id} value={plot.id}>{plot.nombre}</option>
-                ))}
-              </optgroup>
-            )
-          })}
+          {plotsWithVineyard.map(plot => (
+            <option key={plot.id} value={plot.id}>
+              {plot.nombre} ({plot.vineyard_nombre})
+            </option>
+          ))}
         </select>
 
         {/* Mode toggle */}
@@ -224,6 +229,14 @@ export default function PlantHealthMap() {
             Tratamientos
           </button>
         </div>
+
+        {/* Catalog button - always visible */}
+        <button
+          onClick={() => setCatalogOpen(true)}
+          className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium transition flex items-center gap-2"
+        >
+          📋 Ver catálogo
+        </button>
       </div>
 
       {/* Loading state */}
