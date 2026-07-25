@@ -94,12 +94,14 @@ export const getPlantsForPruning = async (req, res) => {
         v.nombre as varietal_nombre,
         v.tipo as varietal_tipo,
         pl.nombre as parcela_nombre,
-        CASE WHEN pp.id IS NOT NULL THEN 1 ELSE 0 END as ya_podada
+        CASE WHEN EXISTS (
+          SELECT 1 FROM plant_prunings pp 
+          WHERE pp.plant_id = p.id AND pp.deleted_at IS NULL AND YEAR(pp.fecha) = ?
+        ) THEN 1 ELSE 0 END as ya_podada
       FROM plants p
       JOIN vine_rows vr ON p.vine_row_id = vr.id
       JOIN plots pl ON vr.plot_id = pl.id
       JOIN varietals v ON p.varietal_id = v.id
-      LEFT JOIN plant_prunings pp ON pp.plant_id = p.id AND pp.deleted_at IS NULL AND YEAR(pp.fecha) = ?
       WHERE vr.plot_id = ? ${deletedFilter}
       ORDER BY vr.numero ASC, p.id ASC`,
       [campaniaNum, plot_id]
