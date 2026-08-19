@@ -11,6 +11,7 @@ front/vineyards/package-lock.json
 back/package-lock.json
 back/node_modules
 back/.env
+back/scripts/backups/
 
 # SDD local cache
 .atl/
