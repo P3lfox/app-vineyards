@@ -11,9 +11,11 @@ import VineRows from "../pages/VineRows"
 import Plants from "../pages/Plants"
 import PlantDetail from "../pages/PlantDetail"
 import PlotMap from "../pages/PlotMap"
+import PlotMap3D from "../pages/PlotMap3D"
 import Harvests from "../pages/Harvests"
 import Tasks from "../pages/Tasks"
-import IrrigationSystems from "../pages/IrrigationSystems"
+import IrrigationEvents from "../pages/IrrigationEvents"
+import IrrigationEventMap from "../pages/IrrigationEventMap"
 import Prunings from "../pages/Prunings"
 import PlantHealthMap from "../pages/PlantHealthMap"
 import Layout from "../components/layout/Layout"
@@ -42,6 +44,7 @@ export const router = createBrowserRouter([
       // Parcelas
       { path: "plots", element: <Plots /> },
       { path: "plots/:plotId/map", element: <PlotMap /> },
+      { path: "plots/:plotId/map3d", element: <PlotMap3D /> },
       { path: "plots/:plotId/rows", element: <VineRows /> },
       { path: "plots/:plotId/rows/:rowId/plants", element: <Plants /> },
       { path: "plots/:plotId/rows/plants", element: <Plants /> },
@@ -50,7 +53,6 @@ export const router = createBrowserRouter([
 
       // Cosechas
       { path: "harvests", element: <Harvests /> },
-      { path: "harvests/create", element: <Harvests /> },
 
       // Tareas
       { path: "tasks", element: <Tasks /> },
@@ -60,7 +62,9 @@ export const router = createBrowserRouter([
       { path: "sanidad", element: <PlantHealthMap /> },
       { path: "diseases", element: <Navigate to="/sanidad" replace /> },
       { path: "treatments", element: <Navigate to="/sanidad" replace /> },
-      { path: "irrigation-systems", element: <IrrigationSystems /> },
+      { path: "irrigation-systems", element: <Navigate to="/irrigation-events" replace /> },
+      { path: "irrigation-events", element: <IrrigationEvents /> },
+      { path: "irrigation-events/:eventId/map", element: <IrrigationEventMap /> },
 
       // Podas
       { path: "prunings", element: <Prunings /> },

@@ -1,5 +1,8 @@
 esquemaDb.sql
-
+esquemaDb.dbml
+/node_modules
+package-lock.json
+skills-lock.json
 
 #front
 front/vineyards/package-lock.json
@@ -9,3 +12,6 @@ front/vineyards/package-lock.json
 back/package-lock.json
 back/node_modules
 back/.env
+
+# SDD local cache
+.atl/

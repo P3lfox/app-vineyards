@@ -1,0 +1,17 @@
+﻿INSERT INTO diseases (nombre, tipo, descripcion, gravedad) VALUES
+('Oídio', 'criptogamica', 'Uncinula necator. Polvo blanco-grisáceo sobre hojas, brotes y racimos. Reduce fotosíntesis y calidad del fruto.', 'grave'),
+('Mildiu', 'criptogamica', 'Plasmopara viticola. Manchas amarillas en el haz y moho blanco en el envés. Puede defoliar la planta completamente.', 'grave'),
+('Botrytis', 'criptogamica', 'Botrytis cinerea. Podredumbre gris de racimos. En condiciones controladas produce vinos dulces nobles, pero generalmente destruye la cosecha.', 'grave'),
+('Black Rot', 'criptogamica', 'Guignardia bidwellii. Manchas circulares marrones en hojas con puntos negros. Los racimos se momifican y caen.', 'moderada'),
+('Polilla del racimo', 'plaga', 'Lobesia botrana. Larvas perforan botones florales y racimos, facilitando entrada de Botrytis y otras podredumbres.', 'grave'),
+('Arañuela amarilla', 'plaga', 'Tetranychus urticae. Ácaro que provoca decoloración y necrosis foliar. Reduce fotosíntesis y vigor de la planta.', 'moderada'),
+('Trips de la vid', 'plaga', 'Frankliniella occidentalis. Raspa hojas y racimos, causando deformaciones y cicatrices plateadas. Vector de virus.', 'moderada'),
+('Pulgón de la vid', 'plaga', 'Daktulosphaira vitifoliae (filoxera). Ataca raíces y hojas. Devastador en variedades europeas sin portainjerto resistente.', 'crítica'),
+('Enrollamiento de la hoja', 'virus', 'Grapevine leafroll-associated virus (GLRaV). Hojas se enrollan hacia abajo, clorosis o rojizo. Reduce rendimiento 20-50% y retrasa maduración.', 'grave'),
+('Degeneración del abanico', 'virus', 'Grapevine fanleaf virus (GFLV). Deformación de hojas en abanico, brotes en zigzag, racimos pequeños. Transmitido por nematodos.', 'grave'),
+('Madera acanalada', 'virus', 'Grapevine virus A (GVA). Surcos longitudinales en la madera del tronco y cordones. Debilita la planta progresivamente.', 'moderada'),
+('Cortezas rugosas', 'virus', 'Grapevine rupestris stem pitting-associated virus (GRSPaV). Picaduras y rugosidad en la corteza. Reduce vigor y longevidad.', 'leve'),
+('Carencia de nitrógeno', 'carencia_nutricional', 'Hojas amarillo pálido desde la base, crecimiento raquítico, racimos pequeños. Común en suelos pobres o lixiviados.', 'moderada'),
+('Carencia de potasio', 'carencia_nutricional', 'Necrosis marginal de hojas adultas, bordes enrollados hacia arriba. Reduce calidad y color de la uva.', 'moderada'),
+('Carencia de magnesio', 'carencia_nutricional', 'Clorosis internervial en hojas basales con forma de V invertida. Afecta fotosíntesis y maduración.', 'leve'),
+('Carencia de hierro', 'carencia_nutricional', 'Clorosis férrica: hojas jóvenes completamente amarillas con nervios verdes. Común en suelos calcáreos y alcalinos.', 'grave');

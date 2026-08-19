@@ -1,13 +1,18 @@
 import { useState } from "react"
+import { api } from "../services/api"
+import { useNavigate } from "react-router-dom"
 
 export default function CreateUser() {
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
+    dni:"",
     email: "",
     password: "",
     rol: "operario",
+    password1: ""
   })
+  const navigate = useNavigate()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -16,38 +21,91 @@ export default function CreateUser() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const res = await fetch("http://localhost:3000/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      alert(data.message || "Error al crear usuario")
+    if(form.password != form.password1){
+      alert("Las contraseñas no son iguales!")
       return
     }
-
-    alert("Usuario creado correctamente ✅")
+    try {
+      await api.post("/users/createUser", form)
+      alert("Usuario creado correctamente ✅")
+      navigate("/users")
+    } catch (e) {
+      console.log(e)
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Crear usuario</h2>
+    <div className="w-full flex items-center justify-center p-6">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-slate-800 p-8 rounded-2xl shadow-lg w-full max-w-sm space-y-4"
+      >
+        <h1 className="text-2xl font-bold text-white text-center">
+          Crear Usuario
+        </h1>
 
-      <input name="nombre" placeholder="Nombre" onChange={handleChange} />
-      <input name="apellido" placeholder="Apellido" onChange={handleChange} />
-      <input name="email" placeholder="Email" onChange={handleChange} />
-      <input name="password" type="password" placeholder="Contraseña" onChange={handleChange} />
+        <input
+          type="text"
+          placeholder="Nombre"
+          name="nombre"
+          className="w-full p-2 rounded bg-slate-700 text-white outline-none"
+          onChange={handleChange}
+        />
 
-      <select name="rol" onChange={handleChange}>
-        <option value="operario">Operario</option>
-        <option value="enologo">Enólogo</option>
-        <option value="admin">Admin</option>
-      </select>
+        <input
+          type="text"
+          placeholder="Apellido"
+          name="apellido"
+          className="w-full p-2 rounded bg-slate-700 text-white outline-none"
+          onChange={handleChange}
+        />
 
-      <button type="submit">Crear</button>
-    </form>
+        <input
+          type="number"
+          placeholder="DNI"
+          name="dni"
+          maxLength={8}
+          className="w-full p-2 rounded bg-slate-700 text-white outline-none"
+          onChange={handleChange}
+        />
+
+        <input
+          type="text"
+          placeholder="Email"
+          name="email"
+          className="w-full p-2 rounded bg-slate-700 text-white outline-none"
+          onChange={handleChange}
+        />
+
+        <input
+          type="password"
+          placeholder="Contraseña"
+          name="password"
+          className="w-full p-2 rounded bg-slate-700 text-white outline-none"
+          onChange={handleChange}
+        />
+
+        <input
+          type="password"
+          placeholder="Repetir contraseña"
+          name="password1"
+          className="w-full p-2 rounded bg-slate-700 text-white outline-none"
+          onChange={handleChange}
+        />
+
+        <select name="rol" onChange={handleChange} className="w-full p-2 rounded bg-slate-700 text-white outline-none">
+          <option value="operario">operario</option>
+          <option value="enologo">enologo</option>
+          <option value="admin">admin</option>
+        </select>
+
+        <button
+          type="submit"
+          className="w-full bg-emerald-600 hover:bg-emerald-700 transition text-white font-semibold py-2 rounded"
+        >
+          Crear
+        </button>
+      </form>
+    </div>
   )
 }

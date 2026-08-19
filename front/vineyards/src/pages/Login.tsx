@@ -16,6 +16,7 @@ export default function Login() {
       .then((res) => {
         localStorage.setItem("token", res.data.token)
         localStorage.setItem("role", res.data.user.rol)
+        localStorage.setItem("userId", res.data.user.id)
         navigate("/")
       })
       .catch(() => {
@@ -24,10 +25,10 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900">
+    <div className="min-h-screen w-screen lex items-center justify-center bg-slate-900 flex items-center justify-center">
       <form
         onSubmit={handleSubmit}
-        className="bg-slate-800 p-8 rounded-2xl shadow-lg w-full max-w-sm space-y-4"
+        className="bg-slate-800 p-8 rounded-2xl shadow-lg w-full max-w-sm space-y-4 "
       >
         <h1 className="text-2xl font-bold text-white text-center">
           Iniciar sesión 🍇

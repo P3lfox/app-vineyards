@@ -86,7 +86,6 @@ export default function PlantHealthModal({
       item.nombre.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-  const catalogItems = isDiseaseMode ? diseases : treatments
   const historyUrl = isDiseaseMode
     ? `/plant-diseases/getPlantDiseases/${plant.id}`
     : `/plant-treatments/getPlantTreatments/${plant.id}`

@@ -1,0 +1,14 @@
+{
+  "name": "app-vineyards",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
+    "dev:back": "cd back && npm run dev",
+    "dev:front": "cd front/vineyards && npm run dev",
+    "build:front": "cd front/vineyards && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

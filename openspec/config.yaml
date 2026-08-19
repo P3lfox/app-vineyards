@@ -1,0 +1,76 @@
+# openspec/config.yaml — app-vineyards
+schema: spec-driven
+
+context: |
+  Tech stack: React 19 + TypeScript 5.9 (strict) + Vite 7 + Tailwind CSS v4 (front/vineyards);
+              Node.js ESM + Express 5 + MySQL mysql2/promise (back); root uses concurrently.
+  Architecture: Monorepo, two independent packages (front/vineyards, back) with separate
+                package.json. REST API under /api (JWT-protected), Vite proxy /api -> :3000.
+                Hierarchical domain: Vineyard -> Plot -> VineRow -> Plant -> PlantStatusHistory.
+  Testing: NO test runner installed anywhere (unit/integration/E2E all unavailable).
+           Quality gates: ESLint 9 flat config (front), tsc -b type check (front build).
+  Style: Spanish identifiers/comments/DB columns. SDD artifacts in English per skill contract.
+         Soft deletes via deleted_at on all tables; role-based access (admin/enologo/operario).
+
+strict_tdd: false  # No test runner detected — TDD unavailable. See testing: section.
+
+testing:
+  detected: "2026-07-24"
+  strict_tdd: false
+  strict_tdd_reason: "No test framework installed in front/ or back/. Backend test script is the npm default placeholder (exits 1). RED-GREEN-REFACTOR is not possible until a runner is added."
+  runner:
+    available: false
+    command: ""
+    framework: ""
+  layers:
+    unit: false
+    integration: false
+    e2e: false
+  coverage:
+    available: false
+    command: ""
+  quality:
+    linter:
+      available: true
+      command: "cd front/vineyards && npm run lint"
+      note: "ESLint 9 flat config: typescript-eslint + react-hooks + react-refresh. Frontend only; backend has no linter."
+    type_checker:
+      available: true
+      command: "cd front/vineyards && npx tsc -b"
+      note: "TypeScript strict mode (tsconfig.app.json). Backend is plain JS ESM — no type checking."
+    formatter:
+      available: false
+      command: ""
+      note: "No Prettier or equivalent configured."
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Note DB schema impact: esquemaDb.sql is gitignored; schema changes need explicit migration notes
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Respect soft-delete cascade (vineyard -> plots -> vine_rows -> plants -> child records)
+    - Respect role-based access matrix (admin / enologo / operario)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - Keep monorepo separation: frontend changes in front/vineyards, API changes in back
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    guidelines:
+      - Follow existing code patterns (Spanish identifiers, controller/route/middleware layout in back)
+      - All new API routes MUST sit behind the JWT middleware unless explicitly public
+      - New entities MUST implement soft delete and role-based filtering like existing controllers
+    tdd: false           # No test runner — see testing.strict_tdd_reason
+    test_command: ""
+  verify:
+    test_command: ""     # Unavailable — no test runner
+    build_command: "cd front/vineyards && npm run build"
+    lint_command: "cd front/vineyards && npm run lint"
+    coverage_threshold: 0
+    manual_verification_required: true  # Without tests, verify via build + lint + manual API checks
+  archive:
+    - Warn before merging destructive deltas

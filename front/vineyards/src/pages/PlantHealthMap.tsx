@@ -4,11 +4,13 @@ import { useNavigate } from "react-router-dom"
 import { varietalColor } from "../constants/varietalColors"
 import PlantHealthModal from "../components/PlantHealthModal"
 import CatalogDrawer from "../components/CatalogDrawer"
+import { getPlantsForRow, getAlignment, getTerrazasStagger, type FormaParcela } from "../lib/plot-grid-utils"
 
 type Plot = {
   id: number
   nombre: string
   vineyard_id: number
+  forma_parcela: string | null
   area_m2?: number | null
   vineyard_nombre?: string
 }
@@ -25,6 +27,8 @@ type Plant = {
   varietal_nombre: string
   varietal_tipo: string
   row_numero: number
+  vine_row_id: number
+  posicion_en_fila: number | null
 }
 
 type Disease = {
@@ -50,6 +54,7 @@ export default function PlantHealthMap() {
   const [selectedPlotId, setSelectedPlotId] = useState<number | null>(null)
   const [rows, setRows] = useState<VineRow[]>([])
   const [plants, setPlants] = useState<Plant[]>([])
+  const [formaParcela, setFormaParcela] = useState<FormaParcela>('rectangular')
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<"disease" | "treatment">("disease")
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null)
@@ -110,6 +115,10 @@ export default function PlantHealthMap() {
         setRows(rowsRes.data)
         setPlants(plantsRes.data)
 
+        // Get plot shape from the selected plot
+        const selectedPlotData = plots.find(p => p.id === selectedPlotId)
+        setFormaParcela((selectedPlotData?.forma_parcela || 'rectangular') as FormaParcela)
+
         // Fetch active diseases and treatments for each planted plant
         const plantedPlants = plantsRes.data as Plant[]
         if (plantedPlants.length > 0) {
@@ -162,13 +171,7 @@ export default function PlantHealthMap() {
     }
   }, [selectedPlotId])
 
-  const getPlantForCell = (rowNumero: number, cellIdx: number) => {
-    const rowPlants = plants.filter(p => p.row_numero === rowNumero)
-    return rowPlants[cellIdx]
-  }
-
   const selectedPlot = plotsWithVineyard.find(p => p.id === selectedPlotId)
-  const maxPlantsInRow = rows.length > 0 ? Math.max(...rows.map(r => r.plant_count), 0) : 0
 
   const handleCellClick = (plant: Plant) => {
     setSelectedPlant(plant)
@@ -273,11 +276,11 @@ export default function PlantHealthMap() {
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-rose-400 border border-rose-300" /> Rosada</span>
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-slate-700 border border-slate-600" /> Sin planta</span>
             <span className="flex items-center gap-1">
-              <span className={`w-3 h-3 rounded-sm border-2 border-red-500 ${loadingHealth ? "animate-pulse" : ""}`} />
+              <span className={`w-3 h-3 rounded-sm ring-2 ring-red-500 bg-slate-600 ${loadingHealth ? "animate-pulse" : ""}`} />
               {loadingHealth ? "Verificando..." : "Con enfermedad"}
             </span>
             <span className="flex items-center gap-1">
-              <span className={`w-3 h-3 rounded-sm border-2 border-cyan-400 ${loadingHealth ? "animate-pulse" : ""}`} />
+              <span className={`w-3 h-3 rounded-sm ring-2 ring-blue-500 bg-slate-600 ${loadingHealth ? "animate-pulse" : ""}`} />
               {loadingHealth ? "Verificando..." : "Con tratamiento"}
             </span>
           </div>
@@ -290,42 +293,41 @@ export default function PlantHealthMap() {
           {/* Grid rendering */}
           <div className="bg-slate-800 rounded-xl p-4 overflow-auto">
             <div className="space-y-1 min-w-fit">
-              {rows.map(row => (
-                <div key={row.id} className="flex items-center gap-1">
-                  <span className="text-xs text-slate-500 w-10 text-right mr-2 shrink-0">F{row.numero}</span>
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: Math.max(maxPlantsInRow, 1) }).map((_, idx) => {
-                      const plant = getPlantForCell(row.numero, idx)
-                      const hasDisease = plant ? activeDiseasePlantIds.has(plant.id) : false
-                      const hasTreatment = plant ? activeTreatmentPlantIds.has(plant.id) : false
+              {rows.map(row => {
+                const rowPlants = getPlantsForRow(plants, row.id)
+                const align = getAlignment(formaParcela)
+                const marginLeft = formaParcela === 'terrazas' ? getTerrazasStagger(row.numero) : 0
+                return (
+                  <div key={row.id} className="flex items-center gap-1">
+                    <span className="text-xs text-slate-500 w-10 text-right mr-2 shrink-0">F{row.numero}</span>
+                    <div className="flex gap-0.5" style={{ justifyContent: align.justifyContent, marginLeft }}>
+                      {rowPlants.map((plant, idx) => {
+                        const hasDisease = activeDiseasePlantIds.has(plant.id)
+                        const hasTreatment = activeTreatmentPlantIds.has(plant.id)
 
-                      // Visual priority: disease (red) > treatment (cyan) > none
-                      const healthIndicator = hasDisease
-                        ? "border-red-500 ring-1 ring-red-500/40"
-                        : hasTreatment
-                          ? "border-cyan-400 ring-1 ring-cyan-400/40"
-                          : ""
+                        // Visual priority: disease (red) > treatment (blue) > none
+                        // Use ring (outside element) to avoid conflict with varietal border colors
+                        const healthIndicator = hasDisease
+                          ? "ring-2 ring-red-500"
+                          : hasTreatment
+                            ? "ring-2 ring-blue-500"
+                            : ""
 
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => plant && handleCellClick(plant)}
-                          title={plant
-                            ? `${plant.varietal_nombre} (F${row.numero} #${idx + 1})${hasDisease ? " ⚠️ Enfermedad" : ""}${hasTreatment ? " 💊 Tratamiento" : ""}`
-                            : `F${row.numero} #${idx + 1} — vacía`}
-                          className={`w-5 h-5 rounded-sm border transition-all shrink-0 ${
-                            plant
-                              ? `${varietalColor[plant.varietal_tipo] || "bg-slate-600 border-slate-500"} hover:opacity-80`
-                              : "bg-slate-700 border-slate-600 opacity-30"
-                          } ${healthIndicator} ${
-                            plant ? "cursor-pointer" : "cursor-default"
-                          }`}
-                        />
-                      )
-                    })}
+                        return (
+                          <button
+                            key={plant.id}
+                            onClick={() => handleCellClick(plant)}
+                            title={`${plant.varietal_nombre} (F${row.numero}, Pos ${plant.posicion_en_fila ?? idx + 1})${hasDisease ? " ⚠️ Enfermedad" : ""}${hasTreatment ? " 💊 Tratamiento" : ""}`}
+                            className={`w-5 h-5 rounded-sm border transition-all shrink-0 ${
+                              `${varietalColor[plant.varietal_tipo] || "bg-slate-600 border-slate-500"} hover:opacity-80`
+                            } ${healthIndicator} cursor-pointer`}
+                          />
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </>

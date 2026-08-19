@@ -9,7 +9,7 @@ const navItems = [
   { to: "/tasks", label: "Tareas", icon: "✅" },
   { to: "/sanidad", label: "Sanidad", icon: "🏥" },
   { to: "/prunings", label: "Podas", icon: "✂️" },
-  { to: "/irrigation-systems", label: "Riego", icon: "💧" },
+  { to: "/irrigation-events", label: "Eventos de Riego", icon: "🚿" },
 ]
 
 export default function Layout() {
