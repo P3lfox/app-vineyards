@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react"
-import { Canvas } from "@react-three/fiber"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { OrbitControls, Environment, Html } from "@react-three/drei"
+import { MathUtils } from "three"
 import { api } from "../services/api"
 import { useNavigate, useParams } from "react-router-dom"
 import { varietalHex, varietalBadgeColor, EMPTY_CELL_HEX } from "../constants/varietalColors"
@@ -23,6 +24,17 @@ type VineRow = {
 }
 
 type Selected = { rowNumero: number; cellIdx: number }
+
+// Datos geográficos de la parcela (mysql2 devuelve los DECIMAL como string).
+type PlotGeo = {
+  nombre: string
+  area_m2: number | string | null
+  latitud: number | string | null
+  longitud: number | string | null
+  altitud: number | string | null
+  orientacion_norte_grados: number | null
+  orientacion_hileras: string | null
+}
 
 // World-space spacing between plants and rows (arbitrary scene units).
 const CELL_GAP = 1.4
@@ -94,6 +106,33 @@ function Vine({
       )}
     </group>
   )
+}
+
+/**
+ * RF-1: Lee el ángulo azimutal de la cámara en cada frame y rota la brújula HTML.
+ *
+ * Convención de la escena: cuando orientacion_norte_grados = 0, el norte geográfico
+ * apunta en la dirección del eje -Z de la escena (que coincide con la parte superior
+ * de la pantalla cuando el azimut inicial de la cámara es 0). Los ángulos crecen en
+ * sentido horario visto desde arriba:
+ *
+ *   compassRotation = orientacion_norte_grados - azimuthDegrees
+ *
+ * El transform se aplica directo al DOM vía ref para no re-renderizar React por frame.
+ */
+function CompassSync({ rosaRef, orientacionNorte }: {
+  rosaRef: React.RefObject<HTMLDivElement | null>
+  orientacionNorte: number
+}) {
+  const controls = useThree((s) => s.controls) as { getAzimuthalAngle?: () => number } | null
+
+  useFrame(() => {
+    if (!rosaRef.current || !controls?.getAzimuthalAngle) return
+    const azimutGrados = MathUtils.radToDeg(controls.getAzimuthalAngle())
+    rosaRef.current.style.transform = `rotate(${orientacionNorte - azimutGrados}deg)`
+  })
+
+  return null
 }
 
 function Scene({
@@ -178,6 +217,7 @@ function Scene({
       ))}
 
       <OrbitControls
+        makeDefault
         enableDamping
         maxPolarAngle={Math.PI / 2.1}
         minDistance={4}
@@ -194,8 +234,11 @@ export default function PlotMap3D() {
   const [rows, setRows] = useState<VineRow[]>([])
   const [plants, setPlants] = useState<Plant[]>([])
   const [formaParcela, setFormaParcela] = useState<FormaParcela>('rectangular')
+  const [plotGeo, setPlotGeo] = useState<PlotGeo | null>(null)
+  const [geoAbierto, setGeoAbierto] = useState(true)
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Selected | null>(null)
+  const rosaRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -207,6 +250,7 @@ export default function PlotMap3D() {
         setRows(rowsRes.data)
         setPlants(plantsRes.data)
         setFormaParcela((plotRes.data.forma_parcela || 'rectangular') as FormaParcela)
+        setPlotGeo(plotRes.data)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -222,6 +266,17 @@ export default function PlotMap3D() {
   const totalPlants = rows.reduce((sum, r) => sum + r.plant_count, 0)
   const plantedCount = plants.length
   const progress = totalPlants > 0 ? Math.round((plantedCount / totalPlants) * 100) : 0
+
+  // Desplazamiento del norte geográfico respecto de la escena (0 si no está cargado).
+  const offsetNorte = Number(plotGeo?.orientacion_norte_grados ?? 0)
+  const sinDatosGeo = !plotGeo || (
+    plotGeo.latitud == null &&
+    plotGeo.longitud == null &&
+    plotGeo.altitud == null &&
+    plotGeo.orientacion_norte_grados == null &&
+    plotGeo.orientacion_hileras == null
+  )
+  const formatearCoordenada = (v: number | string | null) => Number(v).toFixed(6)
 
   if (loading) return <div className="w-full p-6 text-slate-300 text-center">Cargando...</div>
 
@@ -279,11 +334,72 @@ export default function PlotMap3D() {
         <span className="text-slate-500 ml-auto">Arrastrá para rotar · rueda para zoom</span>
       </div>
 
-      <div className="bg-slate-800 rounded-xl overflow-hidden" style={{ height: "70vh" }}>
+      <div className="relative bg-slate-800 rounded-xl overflow-hidden" style={{ height: "70vh" }}>
         <Canvas shadows camera={{ position: [0, 12, 18], fov: 45 }}>
           <color attach="background" args={["#0f172a"]} />
           <Scene rows={rows} plants={plants} selected={selected} onSelect={setSelected} formaParcela={formaParcela} />
+          <CompassSync rosaRef={rosaRef} orientacionNorte={offsetNorte} />
         </Canvas>
+
+        {/* RF-1: Brújula HTML sincronizada con OrbitControls */}
+        <div className="pointer-events-none absolute right-3 top-3 z-10 select-none">
+          <div
+            ref={rosaRef}
+            className="relative h-16 w-16 rounded-full border border-slate-600 bg-slate-900/85 shadow-lg"
+          >
+            {/* Aguja: la mitad roja apunta al norte geográfico */}
+            <div className="absolute left-1/2 top-1/2 h-9 w-[2px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full">
+              <div className="h-1/2 w-full bg-red-400" />
+              <div className="h-1/2 w-full bg-slate-400" />
+            </div>
+            <span className="absolute left-1/2 top-0.5 -translate-x-1/2 text-[10px] font-bold leading-none text-red-400">N</span>
+            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 text-[10px] font-semibold leading-none text-slate-300">S</span>
+            <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] font-semibold leading-none text-slate-300">E</span>
+            <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[10px] font-semibold leading-none text-slate-300">O</span>
+          </div>
+        </div>
+
+        {/* RF-2: Panel colapsable de datos geográficos */}
+        <div className="absolute left-3 top-3 z-10 w-56 max-w-[calc(100%-7rem)]">
+          <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900/85 shadow-lg backdrop-blur-sm">
+            <button
+              onClick={() => setGeoAbierto(!geoAbierto)}
+              className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold text-slate-200 transition hover:text-white"
+            >
+              <span>🌍 Datos geográficos</span>
+              <span className="text-slate-400">{geoAbierto ? "▲" : "▼"}</span>
+            </button>
+            {geoAbierto && (
+              <div className="space-y-1.5 border-t border-slate-700/60 px-3 py-2.5 text-xs">
+                {plotGeo ? (
+                  <>
+                    <p className="font-medium text-white">{plotGeo.nombre}</p>
+                    {sinDatosGeo ? (
+                      <p className="text-slate-400">Sin datos geográficos cargados</p>
+                    ) : (
+                      <div className="space-y-1 text-slate-300">
+                        {plotGeo.latitud != null && <p>Latitud: {formatearCoordenada(plotGeo.latitud)}</p>}
+                        {plotGeo.longitud != null && <p>Longitud: {formatearCoordenada(plotGeo.longitud)}</p>}
+                        {plotGeo.altitud != null && <p>Altitud: {Number(plotGeo.altitud).toFixed(0)} msnm</p>}
+                        {plotGeo.orientacion_hileras && <p>Hileras: {plotGeo.orientacion_hileras}</p>}
+                        {plotGeo.orientacion_norte_grados != null && <p>Norte: {plotGeo.orientacion_norte_grados}°</p>}
+                      </div>
+                    )}
+                    {plotGeo.area_m2 != null && (
+                      <p className="text-emerald-400">
+                        Superficie: {Number(plotGeo.area_m2) >= 10000
+                          ? `${(Number(plotGeo.area_m2) / 10000).toFixed(2)} ha`
+                          : `${Number(plotGeo.area_m2)} m²`}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-slate-400">Sin datos geográficos cargados</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {selected && (

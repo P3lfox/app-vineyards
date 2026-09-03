@@ -13,6 +13,11 @@ type Plot = {
   sistema_tipo: string | null
   forma_parcela: string | null
   terreno: string | null
+  latitud: number | string | null
+  longitud: number | string | null
+  altitud: number | string | null
+  orientacion_norte_grados: number | null
+  orientacion_hileras: string | null
   created_at: string
   deleted_at: string | null
 }
@@ -20,6 +25,33 @@ type Plot = {
 type IrrigationSystem = {
   id: number
   tipo: string
+}
+
+const FORM_INICIAL = {
+  nombre: "", area_m2: "", irrigation_system_id: "", forma_parcela: "rectangular", terreno: "plano",
+  latitud: "", longitud: "", altitud: "", orientacion_norte_grados: "", orientacion_hileras: "",
+}
+
+// Validación de campos geográficos en el cliente (mismos rangos que el backend).
+// Devuelve un mensaje en español, o null si todo es válido.
+const validarGeo = (f: { latitud: string; longitud: string; altitud: string; orientacion_norte_grados: string }) => {
+  if (f.latitud !== "") {
+    const n = parseFloat(f.latitud)
+    if (isNaN(n) || n < -90 || n > 90) return "La latitud debe estar entre -90 y 90"
+  }
+  if (f.longitud !== "") {
+    const n = parseFloat(f.longitud)
+    if (isNaN(n) || n < -180 || n > 180) return "La longitud debe estar entre -180 y 180"
+  }
+  if (f.altitud !== "") {
+    const n = parseFloat(f.altitud)
+    if (isNaN(n)) return "La altitud debe ser un número"
+  }
+  if (f.orientacion_norte_grados !== "") {
+    const n = parseFloat(f.orientacion_norte_grados)
+    if (!Number.isInteger(n) || n < 0 || n > 359) return "La orientación del norte debe ser un entero entre 0 y 359"
+  }
+  return null
 }
 
 export default function Plots() {
@@ -31,8 +63,8 @@ export default function Plots() {
   const [showForm, setShowForm] = useState(false)
   const [showDeleted, setShowDeleted] = useState(false)
   const [editing, setEditing] = useState<Plot | null>(null)
-  const [form, setForm] = useState({ nombre: "", area_m2: "", irrigation_system_id: "", forma_parcela: "rectangular", terreno: "plano" })
-  const [editForm, setEditForm] = useState({ nombre: "", area_m2: "", irrigation_system_id: "", forma_parcela: "rectangular", terreno: "plano" })
+  const [form, setForm] = useState(FORM_INICIAL)
+  const [editForm, setEditForm] = useState(FORM_INICIAL)
   const navigate = useNavigate()
   const admin = isAdmin()
   const canDel = canDelete()
@@ -60,17 +92,27 @@ export default function Plots() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const errorGeo = validarGeo(form)
+    if (errorGeo) {
+      alert(errorGeo)
+      return
+    }
     try {
       const payload = {
         ...form,
         area_m2: parseFloat(form.area_m2) || null,
         vineyard_id: vineyardId ? parseInt(vineyardId) : undefined,
         irrigation_system_id: form.irrigation_system_id ? parseInt(form.irrigation_system_id) : null,
+        latitud: form.latitud !== "" ? parseFloat(form.latitud) : null,
+        longitud: form.longitud !== "" ? parseFloat(form.longitud) : null,
+        altitud: form.altitud !== "" ? parseFloat(form.altitud) : null,
+        orientacion_norte_grados: form.orientacion_norte_grados !== "" ? parseInt(form.orientacion_norte_grados) : null,
+        orientacion_hileras: form.orientacion_hileras || null,
       }
       const res = await api.post("/plots/createPlot", payload)
       setPlots(prev => [...prev, res.data])
       setShowForm(false)
-      setForm({ nombre: "", area_m2: "", irrigation_system_id: "", forma_parcela: "rectangular", terreno: "plano" })
+      setForm(FORM_INICIAL)
     } catch {
       alert("Error al crear la parcela")
     }
@@ -103,12 +145,22 @@ export default function Plots() {
       irrigation_system_id: p.irrigation_system_id?.toString() || "",
       forma_parcela: p.forma_parcela || "rectangular",
       terreno: p.terreno || "plano",
+      latitud: p.latitud?.toString() || "",
+      longitud: p.longitud?.toString() || "",
+      altitud: p.altitud?.toString() || "",
+      orientacion_norte_grados: p.orientacion_norte_grados?.toString() || "",
+      orientacion_hileras: p.orientacion_hileras || "",
     })
   }
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editing) return
+    const errorGeo = validarGeo(editForm)
+    if (errorGeo) {
+      alert(errorGeo)
+      return
+    }
     try {
       await api.patch(`/plots/updatePlot/${editing.id}`, {
         nombre: editForm.nombre,
@@ -116,6 +168,11 @@ export default function Plots() {
         irrigation_system_id: editForm.irrigation_system_id ? parseInt(editForm.irrigation_system_id) : null,
         forma_parcela: editForm.forma_parcela,
         terreno: editForm.terreno,
+        latitud: editForm.latitud !== "" ? parseFloat(editForm.latitud) : null,
+        longitud: editForm.longitud !== "" ? parseFloat(editForm.longitud) : null,
+        altitud: editForm.altitud !== "" ? parseFloat(editForm.altitud) : null,
+        orientacion_norte_grados: editForm.orientacion_norte_grados !== "" ? parseInt(editForm.orientacion_norte_grados) : null,
+        orientacion_hileras: editForm.orientacion_hileras || null,
       })
       const updatedSystem = systems.find(s => s.id === parseInt(editForm.irrigation_system_id))
       setPlots(prev => prev.map(p => p.id === editing.id ? {
@@ -126,6 +183,11 @@ export default function Plots() {
         sistema_tipo: updatedSystem?.tipo || null,
         forma_parcela: editForm.forma_parcela,
         terreno: editForm.terreno,
+        latitud: editForm.latitud !== "" ? parseFloat(editForm.latitud) : null,
+        longitud: editForm.longitud !== "" ? parseFloat(editForm.longitud) : null,
+        altitud: editForm.altitud !== "" ? parseFloat(editForm.altitud) : null,
+        orientacion_norte_grados: editForm.orientacion_norte_grados !== "" ? parseInt(editForm.orientacion_norte_grados) : null,
+        orientacion_hileras: editForm.orientacion_hileras || null,
       } : p))
       setEditing(null)
     } catch (err: any) {
@@ -164,6 +226,22 @@ export default function Plots() {
             <option value="pendiente">Pendiente</option>
             <option value="con_cauce">Con cauce</option>
           </select>
+          <div className="border-t border-slate-700 pt-3">
+            <p className="text-xs font-semibold text-slate-400 mb-2">Datos geográficos (opcional)</p>
+            <div className="space-y-4">
+              <input type="number" step="any" min={-90} max={90} name="latitud" placeholder="Latitud (-90 a 90)" value={editForm.latitud} onChange={e => setEditForm({ ...editForm, latitud: e.target.value })} className="w-full p-2.5 rounded-lg bg-slate-700 text-white outline-none" />
+              <input type="number" step="any" min={-180} max={180} name="longitud" placeholder="Longitud (-180 a 180)" value={editForm.longitud} onChange={e => setEditForm({ ...editForm, longitud: e.target.value })} className="w-full p-2.5 rounded-lg bg-slate-700 text-white outline-none" />
+              <input type="number" step="any" name="altitud" placeholder="Altitud (msnm)" value={editForm.altitud} onChange={e => setEditForm({ ...editForm, altitud: e.target.value })} className="w-full p-2.5 rounded-lg bg-slate-700 text-white outline-none" />
+              <input type="number" step={1} min={0} max={359} name="orientacion_norte_grados" placeholder="Orientación del norte (0-359°)" value={editForm.orientacion_norte_grados} onChange={e => setEditForm({ ...editForm, orientacion_norte_grados: e.target.value })} className="w-full p-2.5 rounded-lg bg-slate-700 text-white outline-none" />
+              <select value={editForm.orientacion_hileras} onChange={e => setEditForm({ ...editForm, orientacion_hileras: e.target.value })} className="w-full p-2.5 rounded-lg bg-slate-700 text-white outline-none">
+                <option value="">Sin orientación de hileras</option>
+                <option value="N-S">N-S</option>
+                <option value="E-O">E-O</option>
+                <option value="NE-SO">NE-SO</option>
+                <option value="NO-SE">NO-SE</option>
+              </select>
+            </div>
+          </div>
           <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 transition text-white font-semibold py-2.5 rounded-lg">Guardar cambios</button>
         </form>
       </div>
@@ -251,6 +329,59 @@ export default function Plots() {
               <option value="ladera">Ladera</option>
               <option value="pendiente">Pendiente</option>
               <option value="con_cauce">Con cauce</option>
+            </select>
+            <input
+              type="number"
+              step="any"
+              min={-90}
+              max={90}
+              name="latitud"
+              placeholder="Latitud (-90 a 90)"
+              value={form.latitud}
+              onChange={handleChange}
+              className="w-40 p-2.5 rounded-lg bg-slate-700 text-white outline-none"
+            />
+            <input
+              type="number"
+              step="any"
+              min={-180}
+              max={180}
+              name="longitud"
+              placeholder="Longitud (-180 a 180)"
+              value={form.longitud}
+              onChange={handleChange}
+              className="w-44 p-2.5 rounded-lg bg-slate-700 text-white outline-none"
+            />
+            <input
+              type="number"
+              step="any"
+              name="altitud"
+              placeholder="Altitud (msnm)"
+              value={form.altitud}
+              onChange={handleChange}
+              className="w-40 p-2.5 rounded-lg bg-slate-700 text-white outline-none"
+            />
+            <input
+              type="number"
+              step={1}
+              min={0}
+              max={359}
+              name="orientacion_norte_grados"
+              placeholder="Norte (0-359°)"
+              value={form.orientacion_norte_grados}
+              onChange={handleChange}
+              className="w-40 p-2.5 rounded-lg bg-slate-700 text-white outline-none"
+            />
+            <select
+              value={form.orientacion_hileras}
+              onChange={e => setForm({ ...form, orientacion_hileras: e.target.value })}
+              className="flex-1 min-w-[200px] p-2.5 rounded-lg bg-slate-700 text-white outline-none"
+            >
+              <option value="">Sin orientación de hileras</option>
+              <option value="N-S">N-S</option>
+              <option value="E-O">E-O</option>
+              <option value="NE-SO">NE-SO</option>
+              <option value="NO-SE">NO-SE</option>
             </select>
             <button
               type="submit"
